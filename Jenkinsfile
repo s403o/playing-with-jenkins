@@ -1,37 +1,25 @@
 pipeline {
-  agent {
-    docker {
-      image 'node:6-alpine'
-      args '-p 3000:3000'
-    }
-
-  }
+  agent any
   stages {
-    stage('Build') {
+    stage('AWS Credentials') {
       steps {
-        sh 'npm install'
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'blueocean', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+        sh """  
+               mkdir -p ~/.aws
+               echo "[default]" >~/.aws/credentials
+               echo "[default]" >~/.boto
+               echo "aws_access_key_id = ${AWS_ACCESS_KEY_ID}" >>~/.boto
+               echo "aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}">>~/.boto
+               echo "aws_access_key_id = ${AWS_ACCESS_KEY_ID}" >>~/.aws/credentials
+               echo "aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}">>~/.aws/credentials
+        """
+        }
       }
     }
-
-    stage('Test') {
-      environment {
-        CI = 'true'
-      }
+    stage('Create EC2 Instance') {
       steps {
-        sh './jenkins/scripts/test.sh'
+        ansiblePlaybook playbook: 'main.yaml', inventory: 'inventory'
       }
     }
-
-    stage('Deploy') {
-      steps {
-        sh './jenkins/scripts/deliver.sh'
-        input 'Finished using the web site? (Click "Proceed" to continue)'
-        sh './jenkins/scripts/kill.sh'
-      }
-    }
-
-  }
-  options {
-    skipStagesAfterUnstable()
   }
 }
