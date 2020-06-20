@@ -18,7 +18,7 @@ pipeline {
         CI = 'true'
       }
       steps {
-        sh 'npm install vue'
+        sh './jenkins/scripts/test.sh'
       }
     }
 
