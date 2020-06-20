@@ -1,22 +1,37 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'node:6-alpine'
+      args '-p 3000:3000'
+    }
+
+  }
   stages {
     stage('Build') {
       steps {
-        sh 'make'
+        sh 'npm install'
       }
     }
 
     stage('Test') {
+      environment {
+        CI = 'true'
+      }
       steps {
-        sh 'make check'
-        junit 'reports/**/*.xml'
+        sh 'npm install vue'
       }
     }
 
     stage('Deploy') {
       steps {
-        sh 'make publish'
+        sh './jenkins/scripts/deliver.sh'
+        input 'Finished using the web site? (Click "Proceed" to continue)'
+      }
+    }
+
+    stage('End') {
+      steps {
+        sh './jenkins/scripts/kill.sh'
       }
     }
 
